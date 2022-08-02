@@ -20,7 +20,7 @@ const getPokemonById = async (req, res, next) => {
             name: pokemon.name,
             image: pokemon.image,
             hp: pokemon.hp,
-            strength: pokemon.attack,
+            strength: pokemon.strength,
             defense: pokemon.defense,
             speed: pokemon.speed,
             weight: pokemon.weight,

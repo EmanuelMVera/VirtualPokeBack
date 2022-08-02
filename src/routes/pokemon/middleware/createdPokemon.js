@@ -13,7 +13,7 @@ const createdPokemon = async (req, res, next) => {
         pokemon.image ||
         "https://w7.pngwing.com/pngs/248/960/png-transparent-pikachu-pokemon-go-silhouette-drawing-pikachu-dog-like-mammal-fictional-character-black.png",
       hp: pokemon.hp || 0,
-      attack: pokemon.attack || 0,
+      attack: pokemon.strength || 0,
       defense: pokemon.defense || 0,
       speed: pokemon.speed || 0,
       height: pokemon.height || 0,
