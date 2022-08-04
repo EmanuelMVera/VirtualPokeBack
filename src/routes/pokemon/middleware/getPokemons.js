@@ -24,9 +24,9 @@ const getPokemons = async (req, res, next) => {
     const pokemonesDeAPI = await axios
       .get(`https://pokeapi.co/api/v2/pokemon?limit=40`)
       .then(({ data }) => data.results)
-      .catch((err) => next(err));
-    const getPokeData = ({ url }) =>
-      axios.get(url).then(({ data }) => {
+      .catch((err) => console.log(err));
+    const getPokeData = async ({ url }) =>
+      await axios.get(url).then(({ data }) => {
         return {
           id: data.id,
           name: data.name,
@@ -37,15 +37,13 @@ const getPokemons = async (req, res, next) => {
         };
       });
     const pokemonesDeAPIDetallados = await Promise.all(
-      pokemonesDeAPI.map(getPokeData)
-    );
+      pokemonesDeAPI?.map(getPokeData)
+    ).catch((err) => []);
 
-    !getPokeDataDb.length
-      ? res.json(pokemonesDeAPIDetallados)
-      : res.json(getPokeDataDb.concat(pokemonesDeAPIDetallados));
+    res.json(getPokeDataDb.concat(pokemonesDeAPIDetallados));
   } catch (error) {
-    console.log("Error: " + error.name);
-    console.log("message: " + error.message);
+    // console.log("Error: " + error.name);
+    // console.log("message: " + error.message);
     next(error);
   }
 };
