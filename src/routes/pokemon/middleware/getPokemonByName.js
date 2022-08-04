@@ -29,9 +29,24 @@ const getPokemonByName = async (req, res, next) => {
       where: {
         [Op.or]: [{ name: { [Op.iLike]: "%" + name } }],
       },
-      include: Types,
+      attributes: ["name", "image"],
+      include: [
+        {
+          model: Types,
+          attributes: ["name"],
+          through: { attributes: [] },
+        },
+      ],
     });
-    if (pokemonDB !== null) return res.json(pokemonDB);
+
+    if (pokemonDB !== null) {
+      let pokemon = {
+        name: pokemonDB.name,
+        image: pokemonDB.image,
+        types: pokemonDB.types.map((type) => type.name),
+      };
+      return res.json(pokemon);
+    }
 
     //Respuesta si no se encuentra al pokemon
     res.json({ name: "err" });
