@@ -4,7 +4,7 @@ const axios = require("axios");
 const { PORT } = process.env;
 
 // Syncing all the models at once.
-conn.sync({ force: true }).then(async () => {
+conn.sync({ force: false }).then(async () => {
   //Precarga de tipos
   const getTypesByDb = await Types.findAll();
 
