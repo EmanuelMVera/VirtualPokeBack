@@ -6,14 +6,18 @@ const { PORT } = process.env;
 // Syncing all the models at once.
 conn.sync({ force: true }).then(async () => {
   //Precarga de tipos
-  const types = await axios.get(`https://pokeapi.co/api/v2/type`);
+  const getTypesByDb = await Types.findAll();
 
-  const typesData = types.data.results?.map((type) => {
-    return {
-      name: type.name,
-    };
-  });
-  await Types.bulkCreate(typesData);
+  if (getTypesByDb.length === 0) {
+    const types = await axios.get(`https://pokeapi.co/api/v2/type`);
+
+    const typesData = types.data.results?.map((type) => {
+      return {
+        name: type.name,
+      };
+    });
+    await Types.bulkCreate(typesData);
+  }
 
   server.listen(PORT, () => console.log(`Listen on port ${PORT}`));
 });
