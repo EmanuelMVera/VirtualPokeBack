@@ -24,18 +24,24 @@ const getPokemons = async (req, res, next) => {
     const pokemonesDeAPI = await axios
       .get(`https://pokeapi.co/api/v2/pokemon?limit=40`)
       .then(({ data }) => data.results)
-      .catch((err) => console.log(err));
+      .catch((err) => []);
+
     const getPokeData = async ({ url }) =>
-      await axios.get(url).then(({ data }) => {
-        return {
+      await axios
+        .get(url)
+        .then(({ data }) => ({
           id: data.id,
           name: data.name,
           image: data.sprites.front_default,
           strength: data.stats[1].base_stat,
           types: data.types?.map(({ type }) => type.name),
           created: false,
-        };
-      });
+        }))
+        .then((poke) => {
+          //   throw new Error(`error ${poke.id}`);
+          return poke;
+        });
+
     const pokemonesDeAPIDetallados = await Promise.all(
       pokemonesDeAPI?.map(getPokeData)
     ).catch((err) => []);
