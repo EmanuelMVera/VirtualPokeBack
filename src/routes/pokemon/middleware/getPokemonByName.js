@@ -1,6 +1,3 @@
-// [ ] GET /pokemons?name="...":
-// Obtener el pokemon que coincida exactamente con el nombre pasado como query parameter (Puede ser de pokeapi o creado por nosotros)
-// Si no existe ningún pokemon mostrar un mensaje adecuado
 const { Pokemon, Types } = require("../../../db.js");
 const axios = require("axios");
 const { Op } = require("sequelize");
@@ -8,55 +5,44 @@ const { Op } = require("sequelize");
 const getPokemonByName = async (req, res, next) => {
   const { name } = req.query;
   try {
-    //Buscar en la API
-    const buscarPokemonAPI = await axios
-      .get(`https://pokeapi.co/api/v2/pokemon/${name.toLowerCase()}`)
-      .then(({ data }) => data)
-      .catch(() => null);
-
-    if (buscarPokemonAPI != null) {
-      const pokemones = {
-        id: buscarPokemonAPI.id,
-        name: buscarPokemonAPI.name,
-        image: buscarPokemonAPI.sprites.front_default,
-        types: buscarPokemonAPI.types.map((tipo) => tipo.type.name),
-      };
-      return res.json(pokemones);
+    let apiResult = null;
+    try {
+      const { data } = await axios.get(
+        `https://pokeapi.co/api/v2/pokemon/${name.toLowerCase()}`
+      );
+      apiResult = data;
+    } catch {
+      apiResult = null;
     }
 
-    //Buscar en la Base de Datos
-    const pokemonDB = await Pokemon.findOne({
-      where: {
-        [Op.or]: [{ name: { [Op.iLike]: "%" + name } }],
-      },
-      attributes: ["name", "image"],
-      include: [
-        {
-          model: Types,
-          attributes: ["name"],
-          through: { attributes: [] },
-        },
-      ],
+    if (apiResult !== null) {
+      return res.json({
+        id: apiResult.id,
+        name: apiResult.name,
+        image: apiResult.sprites.front_default,
+        types: apiResult.types.map((t) => t.type.name),
+      });
+    }
+
+    const dbResult = await Pokemon.findOne({
+      where: { name: { [Op.iLike]: "%" + name + "%" } },
+      attributes: ["id", "name", "image"],
+      include: [{ model: Types, attributes: ["name"], through: { attributes: [] } }],
     });
 
-    if (pokemonDB !== null) {
-      let pokemon = {
-        name: pokemonDB.name,
-        image: pokemonDB.image,
-        types: pokemonDB.types.map((type) => type.name),
-      };
-      return res.json(pokemon);
+    if (dbResult !== null) {
+      return res.json({
+        id: dbResult.id,
+        name: dbResult.name,
+        image: dbResult.image,
+        types: dbResult.types.map((type) => type.name),
+      });
     }
 
-    //Respuesta si no se encuentra al pokemon
     res.json({ name: "err" });
   } catch (err) {
-    console.log("Error: " + err.name);
-    console.log("message: " + err.message);
     next(err);
   }
 };
 
-module.exports = {
-  getPokemonByName,
-};
+module.exports = { getPokemonByName };

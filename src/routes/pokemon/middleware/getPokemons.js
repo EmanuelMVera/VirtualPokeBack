@@ -1,59 +1,54 @@
-// [ ] GET /pokemons:
-// Obtener un listado de los pokemons desde pokeapi.
-// Debe devolver solo los datos necesarios para la ruta principal
 const axios = require("axios");
 const { Pokemon, Types } = require("../../../db");
+const { findStat } = require("../../../utils/findStat");
 
 const getPokemons = async (req, res, next) => {
   try {
-    const obtenerPokemonesDeBD = await Pokemon.findAll({
-      include: Types,
-    });
+    const dbPokemons = await Pokemon.findAll({ include: Types });
 
-    const getPokeDataDb = obtenerPokemonesDeBD.map((response) => {
-      return {
-        id: response.id,
-        name: response.name,
-        image: response.image,
-        strength: response.strength,
-        types: response.types?.map(({ name }) => name),
-        created: response.created,
-      };
-    });
+    const dbPokemonsFormatted = dbPokemons.map((p) => ({
+      id: p.id,
+      name: p.name,
+      image: p.image,
+      strength: p.strength,
+      types: p.types?.map(({ name }) => name),
+      created: p.created,
+    }));
 
-    const pokemonesDeAPI = await axios
-      .get(`https://pokeapi.co/api/v2/pokemon?limit=40`)
-      .then(({ data }) => data.results)
-      .catch((err) => []);
+    let apiResults = [];
+    try {
+      const { data } = await axios.get(
+        "https://pokeapi.co/api/v2/pokemon?limit=40"
+      );
+      apiResults = data.results;
+    } catch {
+      apiResults = [];
+    }
 
-    const getPokeData = async ({ url }) =>
-      await axios
-        .get(url)
-        .then(({ data }) => ({
+    const fetchPokemonDetail = async ({ url }) => {
+      try {
+        const { data } = await axios.get(url);
+        return {
           id: data.id,
           name: data.name,
           image: data.sprites.front_default,
-          strength: data.stats[1].base_stat,
+          strength: findStat(data.stats, "attack"),
           types: data.types?.map(({ type }) => type.name),
           created: false,
-        }))
-        .then((poke) => {
-          //   throw new Error(`error ${poke.id}`);
-          return poke;
-        });
+        };
+      } catch {
+        return null;
+      }
+    };
 
-    const pokemonesDeAPIDetallados = await Promise.all(
-      pokemonesDeAPI?.map(getPokeData)
-    ).catch((err) => []);
+    const apiPokemons = (
+      await Promise.all(apiResults.map(fetchPokemonDetail))
+    ).filter(Boolean);
 
-    res.json(getPokeDataDb.concat(pokemonesDeAPIDetallados));
+    res.json(dbPokemonsFormatted.concat(apiPokemons));
   } catch (error) {
-    // console.log("Error: " + error.name);
-    // console.log("message: " + error.message);
     next(error);
   }
 };
 
-module.exports = {
-  getPokemons,
-};
+module.exports = { getPokemons };

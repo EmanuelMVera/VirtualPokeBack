@@ -1,58 +1,56 @@
-// [ ] POST /pokemons:
-// Recibe los datos recolectados desde el formulario controlado de la ruta de creación de pokemons por body
-// Crea un pokemon en la base de datos relacionado con sus tipos.
 const axios = require("axios");
 const { Pokemon, Types } = require("../../../db.js");
+const { pokemonSchema } = require("../../../validators/pokemonSchema");
+
+const DEFAULT_IMAGE =
+  "https://w7.pngwing.com/pngs/248/960/png-transparent-pikachu-pokemon-go-silhouette-drawing-pikachu-dog-like-mammal-fictional-character-black.png";
 
 const createdPokemon = async (req, res, next) => {
   try {
-    const pokemon = req.body;
-    const objPokemon = {
-      name: pokemon.name,
-      image:
-        pokemon.image ||
-        "https://w7.pngwing.com/pngs/248/960/png-transparent-pikachu-pokemon-go-silhouette-drawing-pikachu-dog-like-mammal-fictional-character-black.png",
-      hp: pokemon.hp || 0,
-      strength: pokemon.strength || 0,
-      defense: pokemon.defense || 0,
-      speed: pokemon.speed || 0,
-      height: pokemon.height || 0,
-      weight: pokemon.weight || 0,
-      created: true,
-    };
-
-    //Validation
-    if (!pokemon.name) res.status(400).json({ error: "missing values" });
-
-    const nameInDb = await Pokemon.findAll({
-      where: { name: pokemon.name },
-    });
-    const nameInApi = await axios
-      .get(`https://pokeapi.co/api/v2/pokemon/${JSON.stringify(pokemon.name)}`)
-      .then(({ data }) => data)
-      .catch((err) => []);
-    if (nameInDb.length > 0 || nameInApi.length > 0)
-      return res.status(400).json({ error: "Name already exists" });
-    //Validation end
-
-    const createdPokemon = await Pokemon.create(objPokemon);
-    let ids;
-    !pokemon.typesId.length ? (ids = [19]) : (ids = pokemon.typesId);
-    const types = await Types.findAll({
-      where: { id: ids },
-    });
-    if (types) {
-      types.forEach((type) => {
-        type.addPokemon(createdPokemon.id);
-      });
+    const result = pokemonSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ errors: result.error.flatten().fieldErrors });
     }
-    res.status(201).json(createdPokemon);
+    const pokemon = result.data;
+
+    const nameInDb = await Pokemon.findOne({ where: { name: pokemon.name } });
+    if (nameInDb) {
+      return res.status(400).json({ error: "Name already exists" });
+    }
+
+    let nameInApi = null;
+    try {
+      const { data } = await axios.get(
+        `https://pokeapi.co/api/v2/pokemon/${pokemon.name.toLowerCase()}`
+      );
+      nameInApi = data;
+    } catch {
+      nameInApi = null;
+    }
+    if (nameInApi !== null) {
+      return res.status(400).json({ error: "Name already exists in PokéAPI" });
+    }
+
+    const newPokemon = await Pokemon.create({
+      name: pokemon.name,
+      image: pokemon.image || DEFAULT_IMAGE,
+      hp: pokemon.hp,
+      strength: pokemon.strength,
+      defense: pokemon.defense,
+      speed: pokemon.speed,
+      height: pokemon.height,
+      weight: pokemon.weight,
+      created: true,
+    });
+
+    const typeIds = pokemon.typesId.length ? pokemon.typesId : [19];
+    const types = await Types.findAll({ where: { id: typeIds } });
+    await Promise.all(types.map((type) => type.addPokemon(newPokemon.id)));
+
+    res.status(201).json(newPokemon);
   } catch (err) {
-    res.sendStatus(500);
     next(err);
   }
 };
 
-module.exports = {
-  createdPokemon,
-};
+module.exports = { createdPokemon };

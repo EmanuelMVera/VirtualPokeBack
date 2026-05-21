@@ -1,60 +1,57 @@
-// [ ] GET /pokemons/{idPokemon}:
-// Obtener el detalle de un pokemon en particular
-// Debe traer solo los datos pedidos en la ruta de detalle de pokemon
-// Tener en cuenta que tiene que funcionar tanto para un id de un pokemon existente en pokeapi o uno creado por ustedes
 const axios = require("axios");
 const { Pokemon, Types } = require("../../../db.js");
+const { findStat } = require("../../../utils/findStat");
 
 const getPokemonById = async (req, res, next) => {
-  const idPokemon = req.params.idPokemon;
+  const { idPokemon } = req.params;
   try {
-    if (typeof idPokemon === "string" && idPokemon.length === 36) {
-      const obtenerPokemonDeBD = await Pokemon.findAll({
+    const isUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        idPokemon
+      );
+
+    if (isUUID) {
+      const dbPokemon = await Pokemon.findOne({
         where: { id: idPokemon },
         include: Types,
       });
-      if (obtenerPokemonDeBD != null) {
-        const pokemonByDbFormated = obtenerPokemonDeBD.map((pokemon) => {
-          return {
-            id: pokemon.id,
-            name: pokemon.name,
-            image: pokemon.image,
-            hp: pokemon.hp,
-            strength: pokemon.strength,
-            defense: pokemon.defense,
-            speed: pokemon.speed,
-            weight: pokemon.weight,
-            height: pokemon.height,
-            types: pokemon.types?.map(({ name }) => name),
-          };
-        });
-        return res.json(pokemonByDbFormated[0]);
-      }
+      if (!dbPokemon) return res.status(404).json({ error: "Pokemon not found" });
+      return res.json({
+        id: dbPokemon.id,
+        name: dbPokemon.name,
+        image: dbPokemon.image,
+        hp: dbPokemon.hp,
+        strength: dbPokemon.strength,
+        defense: dbPokemon.defense,
+        speed: dbPokemon.speed,
+        weight: dbPokemon.weight,
+        height: dbPokemon.height,
+        types: dbPokemon.types?.map(({ name }) => name),
+      });
     }
 
-    if (idPokemon.length <= 3) {
-      const obtenerPokemonDeAPI = await axios
-        .get(`https://pokeapi.co/api/v2/pokemon/${idPokemon}`)
-        .then(({ data }) => data);
-      const pokemon = {
-        id: obtenerPokemonDeAPI.id,
-        name: obtenerPokemonDeAPI.name,
-        image: obtenerPokemonDeAPI.sprites.front_default,
-        hp: obtenerPokemonDeAPI.stats[0].base_stat,
-        strength: obtenerPokemonDeAPI.stats[1].base_stat,
-        defense: obtenerPokemonDeAPI.stats[2].base_stat,
-        speed: obtenerPokemonDeAPI.stats[5].base_stat,
-        types: obtenerPokemonDeAPI.types.map((tipo) => tipo.type.name),
-        weight: obtenerPokemonDeAPI.weight,
-        height: obtenerPokemonDeAPI.height,
-      };
-      return res.json(pokemon);
+    if (Number.isInteger(Number(idPokemon))) {
+      const { data } = await axios.get(
+        `https://pokeapi.co/api/v2/pokemon/${idPokemon}`
+      );
+      return res.json({
+        id: data.id,
+        name: data.name,
+        image: data.sprites.front_default,
+        hp: findStat(data.stats, "hp"),
+        strength: findStat(data.stats, "attack"),
+        defense: findStat(data.stats, "defense"),
+        speed: findStat(data.stats, "speed"),
+        types: data.types.map((t) => t.type.name),
+        weight: data.weight,
+        height: data.height,
+      });
     }
-    res.json({ message: "Id no encontrado" });
+
+    res.status(404).json({ error: "Invalid Pokemon ID" });
   } catch (err) {
     next(err);
   }
 };
-module.exports = {
-  getPokemonById,
-};
+
+module.exports = { getPokemonById };

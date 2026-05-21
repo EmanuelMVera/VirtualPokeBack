@@ -1,44 +1,47 @@
-const { DataTypes } = require("sequelize");
-// Exportamos una funcion que define el modelo
-// Luego le injectamos la conexion a sequelize.
+const { Model, DataTypes } = require("sequelize");
+
 module.exports = (sequelize) => {
-  // defino el modelo
-  sequelize.define("pokemon", {
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
+  class Pokemon extends Model {}
+  Pokemon.init(
+    {
+      id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        unique: true,
+        primaryKey: true,
+        defaultValue: DataTypes.UUIDV4,
+      },
+      name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      image: {
+        type: DataTypes.STRING,
+      },
+      hp: {
+        type: DataTypes.INTEGER,
+      },
+      strength: {
+        type: DataTypes.INTEGER,
+      },
+      defense: {
+        type: DataTypes.INTEGER,
+      },
+      speed: {
+        type: DataTypes.INTEGER,
+      },
+      height: {
+        type: DataTypes.INTEGER,
+      },
+      weight: {
+        type: DataTypes.INTEGER,
+      },
+      created: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+      },
     },
-    id: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      unique: true,
-      primaryKey: true,
-      defaultValue: DataTypes.UUIDV4,
-    },
-    image: {
-      type: DataTypes.STRING,
-    },
-    hp: {
-      type: DataTypes.REAL,
-    },
-    strength: {
-      type: DataTypes.REAL,
-    },
-    defense: {
-      type: DataTypes.REAL,
-    },
-    speed: {
-      type: DataTypes.REAL,
-    },
-    height: {
-      type: DataTypes.REAL,
-    },
-    weight: {
-      type: DataTypes.REAL,
-    },
-    created: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-    },
-  });
+    { sequelize, modelName: "pokemon" }
+  );
+  return Pokemon;
 };
